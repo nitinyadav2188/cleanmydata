@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: tool_stats
+    // Document ID: [toolId] (e.g., 'csv-json', 'drop-na')
+    // Fields:
+    //   - count: number (required) - The number of times the tool was used.
+    //
+    // ===============================================================
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    match /tool_stats/{toolId} {
+      // Anyone can read the stats to display them
+      allow read: if true;
+
+      // Anyone can create a stat document if it doesn't exist, starting at 1
+      allow create: if hasOnlyAllowedFields(['count']) && 
+                       request.resource.data.count == 1;
+
+      // Anyone can update the stat document by incrementing the count by exactly 1
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count']) &&
+                       request.resource.data.count == resource.data.count + 1;
+    }
+  }
+}
